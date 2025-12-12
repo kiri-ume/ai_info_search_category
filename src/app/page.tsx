@@ -1,66 +1,93 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { supabase } from '@/lib/supabase';
+import { Post } from '@/lib/types';
+import PostCard from '@/components/PostCard';
+import styles from './page.module.css';
 
-export default function Home() {
+export const revalidate = 0;
+
+export default async function Home() {
+  let posts: Post[] | null = null;
+
+  try {
+    const { data, error } = await supabase
+      .from('analyzed_posts')
+      .select('*')
+      .order('posted_at', { ascending: false });
+
+    if (!error && data) {
+      posts = data as any;
+    }
+  } catch (e) {
+    console.warn("Supabase connection failed or not configured, falling back to mock data.");
+  }
+
+  // Fallback Mock Data for Demo purposes if DB is empty or unconfigured
+  const displayPosts: Post[] = (posts && posts.length > 0) ? posts : [
+    {
+      id: 'mock-1',
+      content: 'Just dropped a comprehensive tutorial on Transformer Architecture visualizers. It really helps to intuitively understand attention mechanisms.',
+      url: 'https://example.com',
+      category: 'AI / ML',
+      difficulty: 'Intermediate',
+      tags: ['transformer', 'visualization', 'nlp'],
+      is_paywalled: false,
+      posted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: 'mock-2',
+      content: 'Top 10 resources for learning Rust in 2025. #RustLang',
+      url: 'https://example.com/rust',
+      category: 'Programming',
+      difficulty: 'Beginner',
+      tags: ['rust', 'webassembly'],
+      is_paywalled: false,
+      posted_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+      created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    },
+    {
+      id: 'mock-3',
+      content: 'New researches on Agentic workflows showing 30% efficiency boost. Read the full paper below.',
+      url: 'https://arxiv.org/abs/2301.12345',
+      category: 'Research',
+      difficulty: 'Advanced',
+      tags: ['agents', 'llm', 'automation'],
+      is_paywalled: false,
+      posted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: 'mock-4',
+      content: 'How to center a div in 2025 (It is still flexbox).',
+      url: 'https://css-tricks.com',
+      category: 'Frontend',
+      difficulty: 'Beginner',
+      tags: ['css', 'webdev'],
+      is_paywalled: false,
+      posted_at: new Date(Date.now() - 3600000 * 5).toISOString(),
+      created_at: new Date(Date.now() - 3600000 * 5).toISOString(),
+    }
+  ];
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className={styles.main}>
+      <header className={styles.hero}>
+        <h1 className={styles.title}>Daily Learning Field</h1>
+        <p className={styles.subtitle}>
+          Automated curation of high-value learning resources.
+          Analyzed and Categorized by AI.
+        </p>
+      </header>
+
+      <section className={styles.grid}>
+        {displayPosts.map(post => (
+          <PostCard key={post.id} post={post} />
+        ))}
+      </section>
+
+      {(!displayPosts.length) && (
+        <div className={styles.emptyState}>No posts available.</div>
+      )}
+    </main>
   );
 }

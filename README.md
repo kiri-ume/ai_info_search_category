@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Learning Resource Catalog
 
-## Getting Started
+An automated application that aggregates, analyzes, and categorizes learning resources (Tweets, Blogs, Articles) using AI.
 
-First, run the development server:
+## 🚀 Features
 
+- **Automated Scraping**: Fetches URLs from a list (`data/urls.txt`) and extracts content from various sources (X/Twitter, Note, Hatena Blog, etc.).
+- **Smart Content Extraction**: Uses Mozilla Readability to parse article bodies accurately.
+- **AI Analysis**:
+  - Automatically categorizes content (AI, Web Dev, Career, etc.).
+  - Determines difficulty level (Beginner, Intermediate, Advanced).
+  - Extracts relevant tags.
+  - Generates a **Structured 3-Point Summary** (Theme, About, Target).
+- **Hybrid AI Support**: Supports both **Google Gemini API** (Cloud) and **LM Studio** (Local LLM) for privacy and cost control.
+- **Modern UI**: Dark-themed, responsive interface built with Next.js 15.
+- **Notifications**: Sends daily updates to Discord.
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 15 (App Router), React, CSS Modules
+- **Backend/DB**: Supabase (PostgreSQL)
+- **AI**: Google Gemini API / Local LLM (via LM Studio)
+- **Scraping**: Puppeteer, JSDOM, Readability
+- **Automation**: Github Actions (Scheduled Cron) / Local Node Scripts
+
+## 🏁 Getting Started
+
+### 1. Prerequisites
+- Node.js 18+
+- Supabase Account (Free Tier)
+- Google Gemini API Key (Optional if using Local LLM)
+- LM Studio (Optional if using Gemini)
+
+### 2. Installation
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/your/repo.git
+cd ai_info_srch_catg
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Environment Setup
+Create a `.env.local` file based on `DOTENV_TEMPLATE.md`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+GEMINI_API_KEY=... (Optional)
+LM_STUDIO_BASE_URL=http://localhost:1234/v1 (Optional)
+DISCORD_WEBHOOK_URL=... (Optional)
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Database Setup
+Run the SQL script in `supabase/schema.sql` on your Supabase SQL Editor to create tables.
 
-## Learn More
+### 5. Running the Application
 
-To learn more about Next.js, take a look at the following resources:
+**Frontend (Viewer):**
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Data Aggregation (Crawler):**
+Add URLs to `data/urls.txt` (one per line).
+Run the analysis script:
+```bash
+npx tsx scripts/cron-job.ts
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🤖 Using Local LLM (LM Studio)
+This project supports using a local LLM instead of Gemini to avoid rate limits and API costs.
 
-## Deploy on Vercel
+1. Download and install **LM Studio**.
+2. Load a model (e.g., `Llama-3-8B-Instruct` or `Mistral-Nemo`).
+3. Start the **Local Server** (default port: `1234`).
+4. Set `LM_STUDIO_BASE_URL=http://localhost:1234` in `.env.local`.
+5. Run the cron job script. The system will automatically detect the local URL and prioritize it.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📂 Project Structure
+- `src/app`: Next.js App Router pages
+- `src/components`: UI Components (PostCard, etc.)
+- `scripts`: Node.js scripts for scraping and AI analysis
+- `data`: Input data files (urls.txt)
+- `supabase`: Database schema definitions
