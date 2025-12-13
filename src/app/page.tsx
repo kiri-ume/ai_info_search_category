@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { Post } from '@/lib/types';
-import PostCard from '@/components/PostCard';
+import PostList from '@/components/PostList';
 import styles from './page.module.css';
 
 export const revalidate = 0;
@@ -79,15 +79,7 @@ export default async function Home() {
         </p>
       </header>
 
-      <section className={styles.grid}>
-        {displayPosts.map(post => (
-          <PostCard key={post.id} post={post} />
-        ))}
-      </section>
-
-      {(!displayPosts.length) && (
-        <div className={styles.emptyState}>No posts available.</div>
-      )}
+      <PostList initialPosts={displayPosts} />
     </main>
   );
 }

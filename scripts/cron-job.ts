@@ -84,6 +84,7 @@ async function scrapeTweet(url: string, browser: any) {
         return {
             id: tweetId,
             username,
+            title: article?.title || metaTitle || '',
             text: content,
             url: linkedUrl,
             originalUrl: url,
@@ -339,15 +340,17 @@ async function run() {
 
             // Insert
             const { error: insertError } = await supabase.from('analyzed_posts').insert({
-                source_id: sourceData.id,
                 external_id: tweetData.id,
+                source_id: sourceData.id,
                 content: tweetData.text,
+                title: tweetData.title,
                 url: tweetData.url || tweetData.originalUrl,
                 category: analysis.category,
                 difficulty: analysis.difficulty,
                 tags: analysis.tags,
+                is_paywalled: analysis.is_paywalled,
                 summary: analysis.summary,
-                posted_at: tweetData.created_at, // Approximate
+                posted_at: tweetData.created_at
             });
 
             if (!insertError) {

@@ -2,6 +2,7 @@ export type Post = {
     id: string;
     content: string;
     summary?: string;
+    title?: string;
     url: string | null;
     category: string;
     difficulty: string;
