@@ -74,8 +74,10 @@ async function scrapeTweet(url: string, browser: any) {
         const linkedUrl = externalLinks.length > 0 ? externalLinks[0] : null;
 
         // Extract ID from URL
+        // For X/Twitter, use the status ID. For others, use a sanitized version of the URL to ensure uniqueness and stability.
         const idMatch = url.match(/status\/(\d+)/);
-        const tweetId = idMatch ? idMatch[1] : `unknown-${Date.now()}`;
+        // Fallback: Use base64 of URL to create a stable ID for non-twitter links
+        const tweetId = idMatch ? idMatch[1] : Buffer.from(url).toString('base64');
 
         // Extract Username
         const userMatch = url.match(/x\.com\/([^/]+)/) || url.match(/twitter\.com\/([^/]+)/);
