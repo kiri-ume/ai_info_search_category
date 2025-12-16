@@ -42,3 +42,4 @@ next-env.d.ts
 
 # umehara private files
 bat.zsh
+*.code-workspace

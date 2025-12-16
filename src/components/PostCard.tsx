@@ -6,8 +6,10 @@ import { ExternalLink, Clock } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 export default function PostCard({ post }: { post: Post }) {
-    // Logic for "New": created within last 24 hours
-    const isNew = new Date(post.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
+    // Logic for "New": posted today (matches local system date)
+    const postDate = new Date(post.posted_at || post.created_at);
+    const today = new Date();
+    const isNew = postDate.toDateString() === today.toDateString();
 
     return (
         <article className={styles.card}>
