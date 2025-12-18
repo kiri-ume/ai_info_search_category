@@ -83,3 +83,6 @@ This project supports using a local LLM instead of Gemini to avoid rate limits a
 - `scripts`: Node.js scripts for scraping and AI analysis
 - `data`: Input data files (urls.txt)
 - `supabase`: Database schema definitions
+
+## 📜 Update History
+- **2025-12-18 Ver0.1.0**: Initial baseline release.
