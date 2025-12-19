@@ -2,8 +2,58 @@
 
 import { Post } from '@/lib/types';
 import styles from './PostCard.module.css';
-import { ExternalLink, Clock } from 'lucide-react';
+import { ExternalLink, Clock, ThumbsUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { useState, useEffect } from 'react';
+import { incrementLike } from '@/app/actions';
+
+function LikeButton({ postId, initialCount }: { postId: string, initialCount: number }) {
+    const [count, setCount] = useState(initialCount);
+    const [hasLiked, setHasLiked] = useState(false);
+
+    useEffect(() => {
+        const likedParams = localStorage.getItem('liked_posts');
+        if (likedParams) {
+            const likedList = JSON.parse(likedParams);
+            if (likedList.includes(postId)) {
+                setHasLiked(true);
+            }
+        }
+    }, [postId]);
+
+    const handleLike = async () => {
+        if (hasLiked) return;
+
+        setCount(prev => prev + 1);
+        setHasLiked(true);
+
+        // Optimistic update
+        try {
+            await incrementLike(postId);
+
+            // Save to local storage
+            const likedParams = localStorage.getItem('liked_posts');
+            let likedList = likedParams ? JSON.parse(likedParams) : [];
+            likedList.push(postId);
+            localStorage.setItem('liked_posts', JSON.stringify(likedList));
+        } catch (error) {
+            console.error('Failed to like:', error);
+            // Rollback if needed, but for likes it's usually fine to ignore
+        }
+    };
+
+    return (
+        <button
+            onClick={handleLike}
+            className={`${styles.likeButton} ${hasLiked ? styles.liked : ''}`}
+            disabled={hasLiked}
+            aria-label="Like this post"
+        >
+            <ThumbsUp size={16} fill={hasLiked ? "currentColor" : "none"} />
+            <span>{count > 0 ? count : ''}</span>
+        </button>
+    );
+}
 
 export default function PostCard({ post }: { post: Post }) {
     // Logic for "New": posted today (matches local system date)
@@ -53,17 +103,23 @@ export default function PostCard({ post }: { post: Post }) {
             )}
 
             <div className={styles.footer}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Clock size={14} />
-                    <time suppressHydrationWarning>
-                        {new Date(post.posted_at || post.created_at).toLocaleDateString('ja-JP')}
-                    </time>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Clock size={14} />
+                        <time suppressHydrationWarning>
+                            {new Date(post.posted_at || post.created_at).toLocaleDateString('ja-JP')}
+                        </time>
+                    </div>
                 </div>
-                {post.url && (
-                    <a href={post.url} target="_blank" rel="noopener noreferrer" className={styles.linkButton}>
-                        OPEN <ExternalLink size={14} />
-                    </a>
-                )}
+
+                <div className={styles.actions}>
+                    <LikeButton postId={post.id} initialCount={post.like_count || 0} />
+                    {post.url && (
+                        <a href={post.url} target="_blank" rel="noopener noreferrer" className={styles.linkButton}>
+                            OPEN <ExternalLink size={14} />
+                        </a>
+                    )}
+                </div>
             </div>
         </article>
     );

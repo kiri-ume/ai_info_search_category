@@ -13,4 +13,5 @@ export type Post = {
     source?: {
         username: string;
     };
+    like_count?: number;
 };
