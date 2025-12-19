@@ -102,6 +102,7 @@ async function scrapeTweet(url: string, browser: any) {
 }
 
 async function analyzeWithLocalLLM(text: string, url: string | null) {
+    // Update prompt to include tech relevance check
     const prompt = `
     Analyze the following social media post for a learning resource categorization app.
     
@@ -109,11 +110,12 @@ async function analyzeWithLocalLLM(text: string, url: string | null) {
     Linked URL: "${url || 'None'}"
     
     Task:
-    1. Determine the category (e.g., AI, Web Dev, Math, Career, General).
-    2. Determine difficulty (Beginner, Intermediate, Advanced, General).
-    3. Extract up to 3 relevant tags.
-    4. Check if it looks like a paywalled or purely sales content without educational value.
-    5. Generate a summary strictly in the following Markdown format (Must be in Japanese):
+    1. Determine if this content is related to IT, Technology, Programming, AI, or Web Development. (is_tech_related)
+    2. Determine the category (e.g., AI, Web Dev, Math, Career, General).
+    3. Determine difficulty (Beginner, Intermediate, Advanced, General).
+    4. Extract up to 3 relevant tags.
+    5. Check if it looks like a paywalled or purely sales content without educational value.
+    6. Generate a summary strictly in the following Markdown format (Must be in Japanese):
        - **Theme**: (Core topic in 3-5 Japanese words)
        - **About**: (1 sentence explanation in Japanese)
        - **Target**: (Target audience in 3-5 Japanese words)
@@ -122,15 +124,17 @@ async function analyzeWithLocalLLM(text: string, url: string | null) {
 
     Example Output:
     {
+      "is_tech_related": true,
       "category": "AI",
       "difficulty": "Intermediate",
       "tags": ["LLM", "RAG", "Optimization"],
       "is_paywalled": false,
-      "summary": "- **Theme**: RAG精度の向上手法\n- **About**: チャンクサイズ変更ではなく、階層的なチャンキングによってRAGシステムを最適化する方法を解説しています。\n- **Target**: AIエンジニア、データサイエンティスト"
+      "summary": "- **Theme**: RAG精度の向上手法\\n- **About**: 階層的なチャンキングによるRAG最適化を解説。\\n- **Target**: AIエンジニア"
     }
 
     Output JSON format:
     {
+      "is_tech_related": boolean,
       "category": "String",
       "difficulty": "String",
       "tags": ["String"],
@@ -179,6 +183,7 @@ async function analyzeContent(text: string, url: string | null) {
             console.warn('Falling back if possible, otherwise returning error.');
             // Don't fall back to Gemini automatically to respect user preference, or handle error clearly.
             return {
+                is_tech_related: true, // Default to true on error to avoid mass rejection
                 category: 'Error',
                 difficulty: 'Unknown',
                 tags: [],
@@ -190,6 +195,7 @@ async function analyzeContent(text: string, url: string | null) {
 
     if (!genAI) {
         return {
+            is_tech_related: true,
             category: 'Uncategorized',
             difficulty: 'Unknown',
             tags: ['no-ai-key'],
@@ -211,17 +217,19 @@ async function analyzeContent(text: string, url: string | null) {
     Linked URL: "${url || 'None'}"
     
     Task:
-    1. Determine the category (e.g., AI, Web Dev, Math, Career, General).
-    2. Determine difficulty (Beginner, Intermediate, Advanced, General).
-    3. Extract up to 3 relevant tags.
-    4. Check if it looks like a paywalled or purely sales content without educational value.
-    5. Generate a structured summary with exactly 3 items:
+    1. Determine if this content is related to IT, Technology, Programming, AI, or Web Development. (is_tech_related)
+    2. Determine the category (e.g., AI, Web Dev, Math, Career, General).
+    3. Determine difficulty (Beginner, Intermediate, Advanced, General).
+    4. Extract up to 3 relevant tags.
+    5. Check if it looks like a paywalled or purely sales content without educational value.
+    6. Generate a structured summary with exactly 3 items:
        - Theme (What is the core topic in 3-5 words)
        - About (What is this resource explaining in 1 sentence)
        - Target (Who should read this in 3-5 words)
     
     Output JSON format:
     {
+      "is_tech_related": boolean,
       "category": "String",
       "difficulty": "String",
       "tags": ["String"],
@@ -239,6 +247,7 @@ async function analyzeContent(text: string, url: string | null) {
     } catch (e) {
         console.error('AI Analysis failed:', e);
         return {
+            is_tech_related: true,
             category: 'Error',
             difficulty: 'Unknown',
             tags: [],
@@ -341,6 +350,13 @@ async function run() {
             }
 
             // Insert
+            // Insert
+            const status = analysis.is_tech_related ? 'published' : 'pending_review';
+
+            if (status === 'pending_review') {
+                console.log(`[Review] Content marked as non-tech related. Setting status to pending_review: ${tweetData.id}`);
+            }
+
             const { error: insertError } = await supabase.from('analyzed_posts').insert({
                 external_id: tweetData.id,
                 source_id: sourceData.id,
@@ -352,7 +368,9 @@ async function run() {
                 tags: analysis.tags,
                 is_paywalled: analysis.is_paywalled,
                 summary: analysis.summary,
-                posted_at: tweetData.created_at
+                posted_at: tweetData.created_at,
+                is_tech_related: analysis.is_tech_related,
+                status: status
             });
 
             if (!insertError) {

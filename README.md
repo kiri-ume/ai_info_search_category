@@ -90,3 +90,4 @@ This project supports using a local LLM instead of Gemini to avoid rate limits a
   - Added **"Like" button** (with local storage duplicate prevention).
   - Implemented **Keyword Search** (instant filtering for title, summary, tags).
   - Added **Old Posts Folding** (default hides posts older than 1 week, expandable).
+  - Added **IT Relevance Check** using AI (Status flow: `published` / `pending_review`).
