@@ -86,3 +86,8 @@ This project supports using a local LLM instead of Gemini to avoid rate limits a
 
 ## 📜 Update History
 - **2025-12-18 Ver0.1.0**: Initial baseline release.
+- **2025-12-19 Ver0.1.1**:
+  - Added **"Like" button** (with local storage duplicate prevention).
+  - Implemented **Keyword Search** (instant filtering for title, summary, tags).
+  - Added **Old Posts Folding** (default hides posts older than 1 week, expandable).
+  - Added **IT Relevance Check** using AI (Status flow: `published` / `pending_review`).

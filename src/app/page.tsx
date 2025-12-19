@@ -12,6 +12,7 @@ export default async function Home() {
     const { data, error } = await supabase
       .from('analyzed_posts')
       .select('*')
+      .eq('status', 'published')
       .order('posted_at', { ascending: false });
 
     if (!error && data) {
