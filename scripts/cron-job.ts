@@ -27,7 +27,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
-async function scrapeTweet(url: string, browser: any) {
+async function scrapeContent(url: string, browser: any) {
     console.log(`Scraping ${url}...`);
     const page = await browser.newPage();
 
@@ -65,13 +65,17 @@ async function scrapeTweet(url: string, browser: any) {
         // Clean up whitespace and truncate to avoid token limit errors (approx 5000 chars)
         content = content.replace(/\s+/g, ' ').trim().substring(0, 5000);
 
-        // Attempt to find external links (Basic logic kept)
-        const externalLinks = await page.$$eval('a', (anchors: any[]) => {
-            return anchors
-                .map((a: any) => a.href)
-                .filter((href: string) => !href.includes('twitter.com') && !href.includes('x.com') && !href.includes('t.co') && href.startsWith('http'));
-        });
-        const linkedUrl = externalLinks.length > 0 ? externalLinks[0] : null;
+        // Attempt to find external links only if it is a Twitter/X post
+        // For direct articles (Note, Qiita, Zenn, etc.), we want to keep the original URL.
+        let linkedUrl = null;
+        if (url.includes('twitter.com') || url.includes('x.com')) {
+            const externalLinks = await page.$$eval('a', (anchors: any[]) => {
+                return anchors
+                    .map((a: any) => a.href)
+                    .filter((href: string) => !href.includes('twitter.com') && !href.includes('x.com') && !href.includes('t.co') && href.startsWith('http'));
+            });
+            linkedUrl = externalLinks.length > 0 ? externalLinks[0] : null;
+        }
 
         // Extract ID from URL
         // For X/Twitter, use the status ID. For others, use a sanitized version of the URL to ensure uniqueness and stability.
@@ -306,7 +310,7 @@ async function run() {
         await sleep(20000);
 
         try {
-            const tweetData = await scrapeTweet(url, browser);
+            const tweetData = await scrapeContent(url, browser);
 
             if (!tweetData) continue;
 
@@ -349,7 +353,6 @@ async function run() {
                 continue;
             }
 
-            // Insert
             // Insert
             const status = analysis.is_tech_related ? 'published' : 'pending_review';
 
