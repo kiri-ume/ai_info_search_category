@@ -1,0 +1,35 @@
+{
+    "current_model": "qwen3_8b_mlx",
+    "models": {
+        "gpt_oss_20b": {
+            "description": "Optimized parameters for GPT-OSS-20B in LM Studio",
+            "parameters": {
+                "temperature": 0.1,
+                "max_tokens": -1,
+                "stream": false
+            },
+            "system_prompt": "You are an AI assistant that analyzes learning resources and returns strictly valid JSON."
+        },
+        "deepseek_r1_distill_llama_8b": {
+            "description": "Example configuration for DeepSeek R1 Distill Llama 8B",
+            "parameters": {
+                "temperature": 0.6,
+                "max_tokens": -1,
+                "stream": false
+            },
+            "system_prompt": "You are an AI assistant that analyzes learning resources and returns strictly valid JSON."
+        },
+        "qwen3_8b_mlx": {
+            "description": "Optimized parameters for Qwen3-8B (MLX) - Strict JSON mode",
+            "parameters": {
+                "temperature": 0.05,
+                "max_tokens": -1,
+                "stream": false,
+                "top_p": 0.95,
+                "presence_penalty": 0.0,
+                "frequency_penalty": 0.0
+            },
+            "system_prompt": "You are a precise data extraction AI. You MUST output ONLY valid JSON. Do not include markdown code blocks (```json), explanations, or any other text. Verify the JSON structure before outputting. Handle Japanese text correctly."
+        }
+    }
+}

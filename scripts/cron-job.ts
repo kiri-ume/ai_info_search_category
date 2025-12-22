@@ -18,6 +18,37 @@ const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
 // Input file path
 const INPUT_FILE_PATH = path.join(process.cwd(), 'data', 'urls.txt');
+const CONFIG_FILE_PATH = path.join(process.cwd(), 'llm_config.json');
+
+// Interface for Config
+interface LLMConfig {
+    current_model: string;
+    models: {
+        [key: string]: {
+            description: string;
+            parameters: {
+                temperature: number;
+                max_tokens: number;
+                stream: boolean;
+            };
+            system_prompt: string;
+        };
+    };
+}
+
+function loadLLMConfig(): LLMConfig | null {
+    if (!fs.existsSync(CONFIG_FILE_PATH)) {
+        console.warn(`Config file not found at ${CONFIG_FILE_PATH}`);
+        return null;
+    }
+    try {
+        const content = fs.readFileSync(CONFIG_FILE_PATH, 'utf-8');
+        return JSON.parse(content);
+    } catch (e) {
+        console.error('Failed to parse llm_config.json:', e);
+        return null;
+    }
+}
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
     console.error('Missing Supabase environment variables.');
@@ -147,18 +178,29 @@ async function analyzeWithLocalLLM(text: string, url: string | null) {
     }
   `;
 
+    const config = loadLLMConfig();
+    const modelKey = process.env.LLM_MODEL_KEY || config?.current_model || 'gpt_oss_20b';
+    const modelConfig = config?.models[modelKey];
+
+    const systemPrompt = modelConfig?.system_prompt || "You are an AI assistant that analyzes learning resources and returns strictly valid JSON.";
+    const params = modelConfig?.parameters || {
+        temperature: 0.1,
+        max_tokens: -1,
+        stream: false
+    };
+
+    console.log(`Using LLM Config for: ${modelKey}`);
+
     try {
         const response = await fetch(`${LM_STUDIO_BASE_URL}/v1/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 messages: [
-                    { role: "system", content: "You are an AI assistant that analyzes learning resources and returns strictly valid JSON." },
+                    { role: "system", content: systemPrompt },
                     { role: "user", content: prompt }
                 ],
-                temperature: 0.1,
-                max_tokens: -1,
-                stream: false
+                ...params
             })
         });
 
@@ -168,9 +210,21 @@ async function analyzeWithLocalLLM(text: string, url: string | null) {
 
         const data: any = await response.json();
         const content = data.choices[0].message.content;
-        console.log(`[DEBUG] Raw LLM Response:`, content); // Inspect the raw output
-        const cleanText = content.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(cleanText);
+        const usedModel = data.model || 'local-llm';
+        console.log(`[DEBUG] Raw LLM Response (Model: ${usedModel}):`, content); // Inspect the raw output
+
+        // Improve JSON cleanup: find the first '{' and last '}' to strip surrounding text
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const jsonContent = jsonMatch ? jsonMatch[0] : content;
+
+        const cleanText = jsonContent.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        try {
+            return { ...JSON.parse(cleanText), used_model: usedModel };
+        } catch (parseError) {
+            console.error(`[ERROR] JSON Parse Failed. Cleaned Text:\n${cleanText}\nOriginal Content:\n${content}`);
+            throw parseError;
+        }
 
     } catch (e) {
         console.error('Local LLM Analysis failed:', e);
@@ -192,7 +246,8 @@ async function analyzeContent(text: string, url: string | null) {
                 difficulty: 'Unknown',
                 tags: [],
                 is_paywalled: false,
-                summary: ''
+                summary: '',
+                used_model: 'error-fallback'
             };
         }
     }
@@ -204,7 +259,8 @@ async function analyzeContent(text: string, url: string | null) {
             difficulty: 'Unknown',
             tags: ['no-ai-key'],
             is_paywalled: false,
-            summary: ''
+            summary: '',
+            used_model: 'none'
         };
     }
 
@@ -213,7 +269,8 @@ async function analyzeContent(text: string, url: string | null) {
     // we will ask AI to infer from the URL and Tweet text. 
     // Ideally, we would fetch the linked page content here as well.
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const modelName = "gemini-2.0-flash-exp";
+    const model = genAI.getGenerativeModel({ model: modelName });
     const prompt = `
     Analyze the following social media post for a learning resource categorization app.
     
@@ -247,7 +304,7 @@ async function analyzeContent(text: string, url: string | null) {
         const response = await result.response;
         const text = response.text();
         const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(cleanText);
+        return { ...JSON.parse(cleanText), used_model: modelName };
     } catch (e) {
         console.error('AI Analysis failed:', e);
         return {
@@ -256,7 +313,8 @@ async function analyzeContent(text: string, url: string | null) {
             difficulty: 'Unknown',
             tags: [],
             is_paywalled: false,
-            summary: ''
+            summary: '',
+            used_model: 'gemini-error'
         };
     }
 }
@@ -371,6 +429,7 @@ async function run() {
                 tags: analysis.tags,
                 is_paywalled: analysis.is_paywalled,
                 summary: analysis.summary,
+                summary_model: analysis.used_model,
                 posted_at: tweetData.created_at,
                 is_tech_related: analysis.is_tech_related,
                 status: status
@@ -378,7 +437,7 @@ async function run() {
 
             if (!insertError) {
                 newPostsCount++;
-                console.log(`Added: ${tweetData.id}`);
+                console.log(`Added: ${tweetData.id} (Model: ${analysis.used_model})`);
             } else {
                 console.error('Insert error:', insertError);
             }
