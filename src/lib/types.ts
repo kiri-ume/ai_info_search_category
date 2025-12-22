@@ -14,4 +14,5 @@ export type Post = {
         username: string;
     };
     like_count?: number;
+    summary_model?: string;
 };

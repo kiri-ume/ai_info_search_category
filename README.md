@@ -91,3 +91,8 @@ This project supports using a local LLM instead of Gemini to avoid rate limits a
   - Implemented **Keyword Search** (instant filtering for title, summary, tags).
   - Added **Old Posts Folding** (default hides posts older than 1 week, expandable).
   - Added **IT Relevance Check** using AI (Status flow: `published` / `pending_review`).
+- **2025-12-22 Ver0.1.2**:
+    - **Models Logging**: Implemented tracking of the standard LLM model name used for summarization in the database.
+    - **External Config**: Extracted LLM parameters to `llm_config.json` for easier model switching and tuning.
+    - **Local LLM Support**: Added specific configuration and validation for **Qwen3-8B-MLX**.
+    - **Robust Parsing**: Enhanced the scraping script's JSON parser to handle conversational text from chat-based models.
