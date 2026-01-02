@@ -136,6 +136,64 @@ async function scrapeContent(url: string, browser: any) {
     }
 }
 
+
+
+function extractJsonFromText(text: string): string {
+    // 1. Try to find the first '{'
+    const startIndex = text.indexOf('{');
+    if (startIndex === -1) return text; // No JSON found, return original (will likely fail parse, but handled in catch)
+
+    // 2. Simple stack-based brace matching to find the correct end
+    let braceCount = 0;
+    let inString = false;
+    let isEscaped = false;
+    let endIndex = -1;
+
+    for (let i = startIndex; i < text.length; i++) {
+        const char = text[i];
+
+        if (isEscaped) {
+            isEscaped = false;
+            continue;
+        }
+
+        if (char === '\\') {
+            isEscaped = true;
+            continue;
+        }
+
+        if (char === '"') {
+            inString = !inString;
+            continue;
+        }
+
+        if (!inString) {
+            if (char === '{') {
+                braceCount++;
+            } else if (char === '}') {
+                braceCount--;
+                if (braceCount === 0) {
+                    endIndex = i;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (endIndex !== -1) {
+        return text.substring(startIndex, endIndex + 1);
+    }
+
+    // Fallback: if matching failed (broken JSON?), return from start to the last '}' found
+    // This mimics the previous regex behavior as a last resort
+    const lastBrace = text.lastIndexOf('}');
+    if (lastBrace > startIndex) {
+        return text.substring(startIndex, lastBrace + 1);
+    }
+
+    return text.substring(startIndex);
+}
+
 async function analyzeWithLocalLLM(text: string, url: string | null) {
     // Update prompt to include tech relevance check
     const prompt = `
@@ -213,10 +271,8 @@ async function analyzeWithLocalLLM(text: string, url: string | null) {
         const usedModel = data.model || 'local-llm';
         console.log(`[DEBUG] Raw LLM Response (Model: ${usedModel}):`, content); // Inspect the raw output
 
-        // Improve JSON cleanup: find the first '{' and last '}' to strip surrounding text
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        const jsonContent = jsonMatch ? jsonMatch[0] : content;
-
+        // Use robust extraction instead of regex
+        const jsonContent = extractJsonFromText(content);
         const cleanText = jsonContent.replace(/```json/g, '').replace(/```/g, '').trim();
 
         try {
